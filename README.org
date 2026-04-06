@@ -4,7 +4,7 @@ A minor mode for Emacs that colors Verilog =begin=/=end= keywords by
 nesting depth, using the same face palette as [[https://github.com/Fanael/rainbow-delimiters][rainbow-delimiters]].
 
 Requires Emacs 29.1+ and [[https://github.com/Fanael/rainbow-delimiters][rainbow-delimiters]].
-
+[[file:images/demo.png]]
 ** Usage
 
 #+begin_src emacs-lisp
