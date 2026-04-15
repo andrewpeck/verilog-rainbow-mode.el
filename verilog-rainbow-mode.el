@@ -39,6 +39,21 @@
 ;; Forward declaration: defined by define-minor-mode below.
 (defvar verilog-rainbow-mode)
 
+(defun verilog-rainbow-mode--clear ()
+  "Remove all faces previously applied by verilog-rainbow-mode.
+
+Walks only the regions tagged with `verilog-rainbow-face' to avoid
+touching font-lock faces applied by other fontification."
+  (with-silent-modifications
+    (let ((pos (point-min)))
+      (while (< pos (point-max))
+        (let ((next (or (next-single-property-change pos 'verilog-rainbow-face)
+                        (point-max))))
+          (when (get-text-property pos 'verilog-rainbow-face)
+            (remove-text-properties pos next '(verilog-rainbow-face nil
+                                               font-lock-face nil)))
+          (setq pos next))))))
+
 (defun verilog-rainbow-mode--apply-color-range (start end depth match)
   "Apply a rainbow face to the delimiter spanning START to END.
 
@@ -46,13 +61,11 @@ DEPTH is the nesting depth, which selects the face.
 MATCH is nil if this is a mismatched closing delimiter."
   (let ((face (funcall rainbow-delimiters-pick-face-function depth match start)))
     (when face
-      ;; Use put-text-property (replace) rather than font-lock-prepend-text-property
-      ;; (prepend+dedup).  Prepend's dedup check prevents the face from updating
-      ;; when depth decreases: the lower-depth face is already in the accumulated
-      ;; list so memq finds it and does nothing, leaving the stale higher-depth
-      ;; face at the front.  Replacing is correct because we always rescan the
-      ;; whole buffer with fresh depth counts.
-      (put-text-property start end 'font-lock-face face))))
+      (with-silent-modifications
+        ;; Tag the region so verilog-rainbow-mode--clear can find and remove
+        ;; it on the next rescan without disturbing other font-lock faces.
+        (put-text-property start end 'verilog-rainbow-face t)
+        (put-text-property start end 'font-lock-face face)))))
 
 (defun verilog-rainbow-mode--propertize-verilog (_limit)
   "Color all begin/end keywords in the buffer by nesting depth.
@@ -60,9 +73,10 @@ MATCH is nil if this is a mismatched closing delimiter."
 Used as a jit-lock fontification function.  Ignores _LIMIT and
 always scans the whole buffer because nesting depth is global state."
   (when verilog-rainbow-mode
+    (verilog-rainbow-mode--clear)
     (goto-char (point-min))
     (let ((depth 0))
-      (while (re-search-forward "\\<begin\\>\\|\\<end\\>" nil t)
+      (while (re-search-forward "\\_<begin\\_>\\|\\_<end\\_>" nil t)
         (unless (nth 4 (syntax-ppss))
           (let ((delim-start (match-beginning 0))
                 (delim-end   (match-end 0))

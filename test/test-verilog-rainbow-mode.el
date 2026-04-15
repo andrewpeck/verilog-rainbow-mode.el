@@ -47,7 +47,7 @@ font-lock-prepend-text-property always stores a list in Emacs 29+."
   "Return a list of (KEYWORD DEPTH) for each begin/end in the current buffer."
   (let (result)
     (goto-char (point-min))
-    (while (re-search-forward "\\<begin\\>\\|\\<end\\>" nil t)
+    (while (re-search-forward "\\_<begin\\_>\\|\\_<end\\_>" nil t)
       (push (list (match-string 0)
                   (verilog-rainbow-test--depth-at (match-beginning 0)))
             result))
